@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sección de conexión - Azure</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --azul-principal: #0078d4;
+      --azul-oscuro: #005a9e;
+      --azul-claro: #50e6ff;
+      --blanco: #ffffff;
+      --gris-claro: #f3f6f9;
+      --sombra: rgba(0, 120, 212, 0.15);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(160deg, var(--gris-claro) 0%, var(--blanco) 50%, #e8f4fc 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      color: #1a1a2e;
+    }
+
+    .contenedor {
+      text-align: center;
+      max-width: 560px;
+    }
+
+    .cabecera {
+      margin-bottom: 3rem;
+    }
+
+    .cabecera h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--azul-oscuro);
+      margin-bottom: 0.5rem;
+    }
+
+    .cabecera p {
+      font-size: 0.95rem;
+      color: #5a6c7d;
+      font-weight: 500;
+    }
+
+    .botones {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      align-items: center;
+    }
+
+    .boton {
+      width: 100%;
+      max-width: 320px;
+      padding: 1rem 2rem;
+      font-family: inherit;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      text-decoration: none;
+      display: inline-block;
+      text-align: center;
+      color: var(--blanco);
+      background: linear-gradient(135deg, var(--azul-principal) 0%, var(--azul-oscuro) 100%);
+      box-shadow: 0 4px 14px var(--sombra);
+    }
+
+    .boton:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 120, 212, 0.25);
+      background: linear-gradient(135deg, var(--azul-oscuro) 0%, #004578 100%);
+    }
+
+    .boton:active {
+      transform: translateY(0);
+    }
+
+    .boton--secundario {
+      background: var(--blanco);
+      color: var(--azul-principal);
+      border: 2px solid var(--azul-principal);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+    }
+
+    .boton--secundario:hover {
+      background: var(--azul-principal);
+      color: var(--blanco);
+      box-shadow: 0 6px 20px var(--sombra);
+    }
+
+    .pie {
+      margin-top: 3rem;
+      font-size: 0.85rem;
+      color: #7d8a96;
+    }
+
+    /* Mensaje de callback (se muestra si Azure redirige con código) */
+    .mensaje-callback {
+      margin-top: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: var(--blanco);
+      border-radius: 10px;
+      border-left: 4px solid var(--azul-principal);
+      font-size: 0.9rem;
+      color: #5a6c7d;
+      text-align: left;
+      display: none;
+    }
+
+    .mensaje-callback.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <header class="cabecera">
+      <h1>Sección de conexión</h1>
+      <p>Redirección autorizada de Azure · Elija un módulo</p>
+    </header>
+
+    <nav class="botones">
+      <button type="button" class="boton" data-modulo="contabilidad">Contabilidad</button>
+      <button type="button" class="boton boton--secundario" data-modulo="auditorias">Auditorias</button>
+      <button type="button" class="boton" data-modulo="legales">Legales</button>
+    </nav>
+
+    <div id="mensajeCallback" class="mensaje-callback" aria-live="polite"></div>
+
+    <footer class="pie">
+      Conexión segura con Microsoft Azure
+    </footer>
+  </div>
+
+  <script>
+    // Detección de callback de Azure (code o error en la URL)
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get('code');
+      const error = params.get('error');
+      const errorDesc = params.get('error_description');
+      const msgEl = document.getElementById('mensajeCallback');
+
+      if (code) {
+        msgEl.textContent = 'Autorización recibida. Código de autorización obtenido correctamente.';
+        msgEl.classList.add('visible');
+      } else if (error) {
+        msgEl.textContent = 'Error de autorización: ' + (errorDesc || error);
+        msgEl.classList.add('visible');
+        msgEl.style.borderLeftColor = '#d13438';
+      }
+    })();
+
+    // Acción de los botones (personalizable según tu flujo)
+    document.querySelectorAll('.boton').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        const modulo = this.getAttribute('data-modulo');
+        console.log('Módulo seleccionado:', modulo);
+        // Aquí puedes redirigir a cada módulo o enviar a tu backend
+        alert('Módulo seleccionado: ' + modulo.charAt(0).toUpperCase() + modulo.slice(1));
+      });
+    });
+  </script>
+</body>
+</html>
