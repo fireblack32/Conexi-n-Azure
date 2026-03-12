@@ -216,37 +216,9 @@
     </footer>
   </div>
 
-  <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
   <script>
     (function() {
-      var Msal = window.msal;
-      var TENANT_ID = '8a4a8269-593c-48b3-bbe2-64dd5c8718f5';
-      var CLIENT_ID = 'e9f0d060-c3fa-47f7-abc6-fc5590ee7475';
-      var REDIRECT_URI = window.location.hostname === 'localhost'
-        ? (window.location.origin + '/')
-        : 'https://conexi-n-azure.vercel.app/';
-      var SCOPES = ['openid', 'user.read'];
-
-      var msalConfig = {
-        auth: {
-          clientId: CLIENT_ID,
-          authority: 'https://login.microsoftonline.com/' + TENANT_ID,
-          redirectUri: REDIRECT_URI
-        },
-        cache: { cacheLocation: 'sessionStorage' }
-      };
-
-      var msalInstance = null;
-
-      function getMsalInstance() {
-        if (!Msal) throw new Error('MSAL no cargó. Comprueba la conexión o el CDN.');
-        if (!msalInstance) {
-          msalInstance = new Msal.PublicClientApplication(msalConfig);
-        }
-        return msalInstance;
-      }
-
-      function updateUI(account) {
+      function updateUI(user) {
         var estadoSesion = document.getElementById('estadoSesion');
         var botonLogin = document.getElementById('botonLogin');
         var avisoSesion = document.getElementById('avisoSesion');
@@ -254,12 +226,12 @@
         var btnAuditorias = document.getElementById('btnAuditorias');
         var btnLegales = document.getElementById('btnLegales');
 
-        if (account) {
+        if (user) {
           estadoSesion.classList.add('visible');
-          document.getElementById('usuarioNombre').textContent = account.name || 'Usuario';
+          document.getElementById('usuarioNombre').textContent = user.name || 'Usuario';
           var emailEl = document.getElementById('usuarioEmail');
-          if (account.username) {
-            emailEl.textContent = ' · ' + account.username;
+          if (user.email) {
+            emailEl.textContent = ' · ' + user.email;
             emailEl.style.display = 'inline';
           } else {
             emailEl.style.display = 'none';
@@ -287,56 +259,42 @@
         if (isError) msgEl.style.borderLeftColor = '#d13438';
       }
 
-      function hideCallbackMessage() {
-        var msgEl = document.getElementById('mensajeCallback');
-        msgEl.textContent = '';
-        msgEl.classList.remove('visible', 'error');
-        msgEl.style.borderLeftColor = '';
+      function checkAuthParams() {
+        var params = new URLSearchParams(window.location.search);
+        var authOk = params.get('auth_ok');
+        var authError = params.get('auth_error');
+        if (authOk) {
+          showCallbackMessage('Sesión iniciada correctamente.', false);
+        }
+        if (authError) {
+          showCallbackMessage(decodeURIComponent(authError), true);
+        }
+        if (authOk || authError) {
+          window.history.replaceState({}, document.title, window.location.pathname || '/');
+        }
       }
 
-      function initAuth() {
-        var pca = getMsalInstance();
-        var promise = typeof pca.initialize === 'function'
-          ? pca.initialize().then(function() { return pca.handleRedirectPromise(); })
-          : Promise.resolve(pca.handleRedirectPromise());
-        promise.then(function(response) {
-          if (response) {
-            showCallbackMessage('Sesión iniciada correctamente.', false);
-            updateUI(response.account);
-          } else {
-            var accounts = pca.getAllAccounts();
-            if (accounts.length > 0) {
-              updateUI(accounts[0]);
-            } else {
-              var params = new URLSearchParams(window.location.search);
-              var error = params.get('error');
-              var errorDesc = params.get('error_description');
-              if (error) {
-                showCallbackMessage('Error de autorización: ' + (errorDesc || error), true);
-              }
-              updateUI(null);
-            }
-          }
-        }).catch(function(err) {
-          console.error('Error en redirect o init:', err);
-          showCallbackMessage('Error: ' + (err.message || String(err)), true);
-          updateUI(null);
-        });
+      function loadSession() {
+        checkAuthParams();
+        fetch('/api/auth/me', { credentials: 'include' })
+          .then(function(r) {
+            if (r.ok) return r.json();
+            return null;
+          })
+          .then(function(data) {
+            updateUI(data && data.user ? data.user : null);
+          })
+          .catch(function() {
+            updateUI(null);
+          });
       }
 
       document.getElementById('botonLogin').addEventListener('click', function() {
-        hideCallbackMessage();
-        getMsalInstance().loginRedirect({ scopes: SCOPES }).catch(function(err) {
-          console.error('Error loginRedirect:', err);
-          showCallbackMessage('Error al iniciar sesión: ' + (err.message || String(err)), true);
-        });
+        window.location.href = '/api/auth/login';
       });
 
       document.getElementById('botonLogout').addEventListener('click', function() {
-        var account = getMsalInstance().getAllAccounts()[0];
-        if (account) {
-          getMsalInstance().logoutRedirect({ account: account });
-        }
+        window.location.href = '/api/auth/logout';
       });
 
       document.querySelectorAll('.botones .boton').forEach(function(btn) {
@@ -347,15 +305,7 @@
         });
       });
 
-      if (Msal) {
-        initAuth();
-      } else {
-        document.getElementById('botonLogin').style.display = 'block';
-        document.getElementById('avisoSesion').classList.add('visible');
-        document.getElementById('btnContabilidad').disabled = true;
-        document.getElementById('btnAuditorias').disabled = true;
-        document.getElementById('btnLegales').disabled = true;
-      }
+      loadSession();
     })();
   </script>
 </body>
