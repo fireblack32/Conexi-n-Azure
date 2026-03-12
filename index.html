@@ -216,9 +216,10 @@
     </footer>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.22.0/dist/msal-browser.min.js"></script>
+  <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
   <script>
     (function() {
+      var Msal = window.msal;
       var TENANT_ID = '8a4a8269-593c-48b3-bbe2-64dd5c8718f5';
       var CLIENT_ID = 'e9f0d060-c3fa-47f7-abc6-fc5590ee7475';
       var REDIRECT_URI = window.location.hostname === 'localhost'
@@ -238,8 +239,9 @@
       var msalInstance = null;
 
       function getMsalInstance() {
+        if (!Msal) throw new Error('MSAL no cargó. Comprueba la conexión o el CDN.');
         if (!msalInstance) {
-          msalInstance = new msal.PublicClientApplication(msalConfig);
+          msalInstance = new Msal.PublicClientApplication(msalConfig);
         }
         return msalInstance;
       }
@@ -344,7 +346,7 @@
         });
       });
 
-      if (typeof msal !== 'undefined') {
+      if (Msal) {
         initAuth();
       } else {
         document.getElementById('botonLogin').style.display = 'block';
