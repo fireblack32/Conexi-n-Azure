@@ -296,9 +296,10 @@
 
       function initAuth() {
         var pca = getMsalInstance();
-        pca.initialize().then(function() {
-          return pca.handleRedirectPromise();
-        }).then(function(response) {
+        var promise = typeof pca.initialize === 'function'
+          ? pca.initialize().then(function() { return pca.handleRedirectPromise(); })
+          : Promise.resolve(pca.handleRedirectPromise());
+        promise.then(function(response) {
           if (response) {
             showCallbackMessage('Sesión iniciada correctamente.', false);
             updateUI(response.account);
