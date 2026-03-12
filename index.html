@@ -129,6 +129,62 @@
     .mensaje-callback.visible {
       display: block;
     }
+
+    .mensaje-callback.error {
+      border-left-color: #d13438;
+    }
+
+    .estado-sesion {
+      margin-bottom: 1.5rem;
+      padding: 1rem 1.25rem;
+      background: var(--blanco);
+      border-radius: 10px;
+      border-left: 4px solid var(--azul-principal);
+      font-size: 0.9rem;
+      color: #5a6c7d;
+      text-align: left;
+      display: none;
+    }
+
+    .estado-sesion.visible {
+      display: block;
+    }
+
+    .estado-sesion .usuario-nombre {
+      font-weight: 600;
+      color: var(--azul-oscuro);
+    }
+
+    .estado-sesion .boton-logout {
+      margin-top: 0.75rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      background: transparent;
+      color: var(--azul-principal);
+      border: 1px solid var(--azul-principal);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .estado-sesion .boton-logout:hover {
+      background: var(--gris-claro);
+    }
+
+    .boton-login {
+      margin-bottom: 1.5rem;
+    }
+
+    .aviso-sesion {
+      margin-bottom: 1rem;
+      font-size: 0.9rem;
+      color: #5a6c7d;
+      display: none;
+    }
+
+    .aviso-sesion.visible {
+      display: block;
+    }
   </style>
 </head>
 <body>
@@ -138,10 +194,19 @@
       <p>Redirección autorizada de Azure · Elija un módulo</p>
     </header>
 
+    <div id="estadoSesion" class="estado-sesion" aria-live="polite">
+      <span class="usuario-nombre" id="usuarioNombre"></span>
+      <span id="usuarioEmail"></span>
+      <button type="button" class="boton-logout" id="botonLogout">Cerrar sesión</button>
+    </div>
+
+    <div id="avisoSesion" class="aviso-sesion">Inicia sesión para continuar.</div>
+    <button type="button" class="boton boton-login" id="botonLogin" style="display: none;">Iniciar sesión con Microsoft</button>
+
     <nav class="botones">
-      <button type="button" class="boton" data-modulo="contabilidad">Contabilidad</button>
-      <button type="button" class="boton boton--secundario" data-modulo="auditorias">Auditorias</button>
-      <button type="button" class="boton" data-modulo="legales">Legales</button>
+      <button type="button" class="boton" data-modulo="contabilidad" id="btnContabilidad">Contabilidad</button>
+      <button type="button" class="boton boton--secundario" data-modulo="auditorias" id="btnAuditorias">Auditorias</button>
+      <button type="button" class="boton" data-modulo="legales" id="btnLegales">Legales</button>
     </nav>
 
     <div id="mensajeCallback" class="mensaje-callback" aria-live="polite"></div>
@@ -151,34 +216,144 @@
     </footer>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3.22.0/dist/msal-browser.min.js"></script>
   <script>
-    // Detección de callback de Azure (code o error en la URL)
     (function() {
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get('code');
-      const error = params.get('error');
-      const errorDesc = params.get('error_description');
-      const msgEl = document.getElementById('mensajeCallback');
+      var TENANT_ID = '8a4a8269-593c-48b3-bbe2-64dd5c8718f5';
+      var CLIENT_ID = 'e9f0d060-c3fa-47f7-abc6-fc5590ee7475';
+      var REDIRECT_URI = window.location.hostname === 'localhost'
+        ? (window.location.origin + '/')
+        : 'https://conexi-n-azure.vercel.app/';
+      var SCOPES = ['openid', 'user.read'];
 
-      if (code) {
-        msgEl.textContent = 'Autorización recibida. Código de autorización obtenido correctamente.';
+      var msalConfig = {
+        auth: {
+          clientId: CLIENT_ID,
+          authority: 'https://login.microsoftonline.com/' + TENANT_ID,
+          redirectUri: REDIRECT_URI
+        },
+        cache: { cacheLocation: 'sessionStorage' }
+      };
+
+      var msalInstance = null;
+
+      function getMsalInstance() {
+        if (!msalInstance) {
+          msalInstance = new msal.PublicClientApplication(msalConfig);
+        }
+        return msalInstance;
+      }
+
+      function updateUI(account) {
+        var estadoSesion = document.getElementById('estadoSesion');
+        var botonLogin = document.getElementById('botonLogin');
+        var avisoSesion = document.getElementById('avisoSesion');
+        var btnContabilidad = document.getElementById('btnContabilidad');
+        var btnAuditorias = document.getElementById('btnAuditorias');
+        var btnLegales = document.getElementById('btnLegales');
+
+        if (account) {
+          estadoSesion.classList.add('visible');
+          document.getElementById('usuarioNombre').textContent = account.name || 'Usuario';
+          var emailEl = document.getElementById('usuarioEmail');
+          if (account.username) {
+            emailEl.textContent = ' · ' + account.username;
+            emailEl.style.display = 'inline';
+          } else {
+            emailEl.style.display = 'none';
+          }
+          botonLogin.style.display = 'none';
+          avisoSesion.classList.remove('visible');
+          btnContabilidad.disabled = false;
+          btnAuditorias.disabled = false;
+          btnLegales.disabled = false;
+        } else {
+          estadoSesion.classList.remove('visible');
+          botonLogin.style.display = 'block';
+          avisoSesion.classList.add('visible');
+          btnContabilidad.disabled = true;
+          btnAuditorias.disabled = true;
+          btnLegales.disabled = true;
+        }
+      }
+
+      function showCallbackMessage(text, isError) {
+        var msgEl = document.getElementById('mensajeCallback');
+        msgEl.textContent = text;
         msgEl.classList.add('visible');
-      } else if (error) {
-        msgEl.textContent = 'Error de autorización: ' + (errorDesc || error);
-        msgEl.classList.add('visible');
-        msgEl.style.borderLeftColor = '#d13438';
+        msgEl.classList.toggle('error', !!isError);
+        if (isError) msgEl.style.borderLeftColor = '#d13438';
+      }
+
+      function hideCallbackMessage() {
+        var msgEl = document.getElementById('mensajeCallback');
+        msgEl.textContent = '';
+        msgEl.classList.remove('visible', 'error');
+        msgEl.style.borderLeftColor = '';
+      }
+
+      function initAuth() {
+        var pca = getMsalInstance();
+        pca.initialize().then(function() {
+          return pca.handleRedirectPromise();
+        }).then(function(response) {
+          if (response) {
+            showCallbackMessage('Sesión iniciada correctamente.', false);
+            updateUI(response.account);
+          } else {
+            var accounts = pca.getAllAccounts();
+            if (accounts.length > 0) {
+              updateUI(accounts[0]);
+            } else {
+              var params = new URLSearchParams(window.location.search);
+              var error = params.get('error');
+              var errorDesc = params.get('error_description');
+              if (error) {
+                showCallbackMessage('Error de autorización: ' + (errorDesc || error), true);
+              }
+              updateUI(null);
+            }
+          }
+        }).catch(function(err) {
+          console.error('Error en redirect o init:', err);
+          showCallbackMessage('Error: ' + (err.message || String(err)), true);
+          updateUI(null);
+        });
+      }
+
+      document.getElementById('botonLogin').addEventListener('click', function() {
+        hideCallbackMessage();
+        getMsalInstance().loginRedirect({ scopes: SCOPES }).catch(function(err) {
+          console.error('Error loginRedirect:', err);
+          showCallbackMessage('Error al iniciar sesión: ' + (err.message || String(err)), true);
+        });
+      });
+
+      document.getElementById('botonLogout').addEventListener('click', function() {
+        var account = getMsalInstance().getAllAccounts()[0];
+        if (account) {
+          getMsalInstance().logoutRedirect({ account: account });
+        }
+      });
+
+      document.querySelectorAll('.botones .boton').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var modulo = this.getAttribute('data-modulo');
+          console.log('Módulo seleccionado:', modulo);
+          alert('Módulo seleccionado: ' + (modulo ? modulo.charAt(0).toUpperCase() + modulo.slice(1) : ''));
+        });
+      });
+
+      if (typeof msal !== 'undefined') {
+        initAuth();
+      } else {
+        document.getElementById('botonLogin').style.display = 'block';
+        document.getElementById('avisoSesion').classList.add('visible');
+        document.getElementById('btnContabilidad').disabled = true;
+        document.getElementById('btnAuditorias').disabled = true;
+        document.getElementById('btnLegales').disabled = true;
       }
     })();
-
-    // Acción de los botones (personalizable según tu flujo)
-    document.querySelectorAll('.boton').forEach(function(btn) {
-      btn.addEventListener('click', function() {
-        const modulo = this.getAttribute('data-modulo');
-        console.log('Módulo seleccionado:', modulo);
-        // Aquí puedes redirigir a cada módulo o enviar a tu backend
-        alert('Módulo seleccionado: ' + modulo.charAt(0).toUpperCase() + modulo.slice(1));
-      });
-    });
   </script>
 </body>
 </html>
