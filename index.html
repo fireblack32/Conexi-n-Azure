@@ -185,6 +185,48 @@
     .aviso-sesion.visible {
       display: block;
     }
+
+    .boton-graph {
+      margin-top: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-size: 0.9rem;
+      background: var(--gris-claro);
+      color: var(--azul-oscuro);
+      border: 1px solid var(--azul-principal);
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .boton-graph:hover {
+      background: #e0eef7;
+    }
+
+    .datos-graph {
+      margin-top: 1rem;
+      padding: 1rem;
+      background: var(--blanco);
+      border-radius: 10px;
+      border-left: 4px solid var(--azul-principal);
+      font-size: 0.85rem;
+      color: #5a6c7d;
+      text-align: left;
+      display: none;
+    }
+
+    .datos-graph.visible {
+      display: block;
+    }
+
+    .datos-graph.error {
+      border-left-color: #d13438;
+    }
+
+    .datos-graph pre {
+      margin-top: 0.5rem;
+      overflow: auto;
+      max-height: 200px;
+    }
   </style>
 </head>
 <body>
@@ -198,7 +240,9 @@
       <span class="usuario-nombre" id="usuarioNombre"></span>
       <span id="usuarioEmail"></span>
       <button type="button" class="boton-logout" id="botonLogout">Cerrar sesión</button>
+      <button type="button" class="boton-graph" id="botonGraph">Cargar datos de Graph</button>
     </div>
+    <div id="datosGraph" class="datos-graph" aria-live="polite"></div>
 
     <div id="avisoSesion" class="aviso-sesion">Inicia sesión para continuar.</div>
     <button type="button" class="boton boton-login" id="botonLogin" style="display: none;">Iniciar sesión con Microsoft</button>
@@ -224,6 +268,8 @@
       var CLIENT_ID = 'c0ae2e4f-2e18-41f0-aba7-3e8199d8460e';
       var REDIRECT_URI = window.location.origin + '/';
       var SCOPES = ['openid', 'user.read'];
+      var GRAPH_SCOPES = ['user.read'];
+      var GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 
       var msalConfig = {
         auth: {
@@ -292,6 +338,42 @@
         msgEl.style.borderLeftColor = '';
       }
 
+      function getGraphAccessToken() {
+        var pca = getMsalInstance();
+        var accounts = pca.getAllAccounts();
+        if (!accounts.length) return Promise.reject(new Error('No hay sesión'));
+        return pca.acquireTokenSilent({
+          scopes: GRAPH_SCOPES,
+          account: accounts[0]
+        }).then(function(r) { return r.accessToken; });
+      }
+
+      function fetchFromGraph(path) {
+        return getGraphAccessToken().then(function(token) {
+          return fetch(GRAPH_BASE + path, {
+            headers: { Authorization: 'Bearer ' + token }
+          }).then(function(res) {
+            if (!res.ok) throw new Error('Graph: ' + res.status);
+            return res.json();
+          });
+        });
+      }
+
+      function loadGraphMe() {
+        var el = document.getElementById('datosGraph');
+        el.classList.remove('error');
+        el.classList.add('visible');
+        el.innerHTML = 'Cargando perfil de Microsoft Graph...';
+        fetchFromGraph('/me').then(function(me) {
+          el.classList.remove('error');
+          el.innerHTML = '<strong>Perfil desde Graph (/me)</strong><pre>' +
+            JSON.stringify(me, null, 2) + '</pre>';
+        }).catch(function(err) {
+          el.innerHTML = '<strong>Error</strong>: ' + (err.message || String(err));
+          el.classList.add('error');
+        });
+      }
+
       function initAuth() {
         var pca = getMsalInstance();
         var promise = typeof pca.initialize === 'function'
@@ -335,6 +417,10 @@
         if (account) {
           getMsalInstance().logoutRedirect({ account: account });
         }
+      });
+
+      document.getElementById('botonGraph').addEventListener('click', function() {
+        loadGraphMe();
       });
 
       document.querySelectorAll('.botones .boton').forEach(function(btn) {
