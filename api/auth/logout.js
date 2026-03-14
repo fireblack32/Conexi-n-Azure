@@ -1,11 +1,10 @@
 const SESSION_COOKIE = 'session';
 const STATE_COOKIE = 'auth_state';
 
+const BASE_URL = 'https://conexi-n-azure.vercel.app';
+
 function getBaseUrl() {
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return process.env.APP_URL || 'http://localhost:3000';
+  return BASE_URL;
 }
 
 module.exports = function handler(req, res) {

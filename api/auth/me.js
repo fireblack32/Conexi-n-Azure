@@ -29,7 +29,7 @@ module.exports = function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const sessionSecret = process.env.SESSION_SECRET;
+  const sessionSecret = '3a8b26a805bce8d26ba6257a4f93bd7260993a8f86bf1331d0f157f1bd1b37cb';
   if (!sessionSecret) {
     return res.status(500).json({ error: 'SESSION_SECRET no configurado' });
   }

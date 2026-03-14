@@ -3,11 +3,10 @@ const crypto = require('crypto');
 const STATE_COOKIE = 'auth_state';
 const STATE_MAX_AGE = 600; // 10 min
 
+const BASE_URL = 'https://conexi-n-azure.vercel.app';
+
 function getBaseUrl() {
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return process.env.APP_URL || 'http://localhost:3000';
+  return BASE_URL;
 }
 
 function setStateCookie(res, state) {
@@ -21,8 +20,8 @@ module.exports = function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const tenantId = process.env.AZURE_TENANT_ID;
-  const clientId = process.env.AZURE_CLIENT_ID;
+  const tenantId = '8a4a8269-593c-48b3-bbe2-64dd5c8718f5';
+  const clientId = 'e9f0d060-c3fa-47f7-abc6-fc5590ee7475';
   const baseUrl = getBaseUrl();
   const redirectUri = `${baseUrl}/api/auth/callback`;
 

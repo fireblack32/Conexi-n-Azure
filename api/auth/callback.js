@@ -4,11 +4,10 @@ const SESSION_COOKIE = 'session';
 const STATE_COOKIE = 'auth_state';
 const SESSION_MAX_AGE = 24 * 60 * 60; // 24 h
 
+const BASE_URL = 'https://conexi-n-azure.vercel.app';
+
 function getBaseUrl() {
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-  return process.env.APP_URL || 'http://localhost:3000';
+  return BASE_URL;
 }
 
 function getCookie(req, name) {
@@ -66,10 +65,10 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const tenantId = process.env.AZURE_TENANT_ID;
-  const clientId = process.env.AZURE_CLIENT_ID;
-  const clientSecret = process.env.AZURE_CLIENT_SECRET;
-  const sessionSecret = process.env.SESSION_SECRET;
+  const tenantId = '8a4a8269-593c-48b3-bbe2-64dd5c8718f5';
+  const clientId = 'e9f0d060-c3fa-47f7-abc6-fc5590ee7475';
+  const clientSecret = '77be8339-7ac9-467f-a9ea-3b93c92c858f';
+  const sessionSecret = '3a8b26a805bce8d26ba6257a4f93bd7260993a8f86bf1331d0f157f1bd1b37cb';
 
   if (!tenantId || !clientId || !clientSecret || !sessionSecret) {
     res.redirect(302, appOrigin + '/?auth_error=' + encodeURIComponent('Faltan variables de entorno en el servidor.'));
@@ -141,7 +140,7 @@ module.exports = async function handler(req, res) {
   const setSession = SESSION_COOKIE + '=' + encodeURIComponent(sessionValue) + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' + SESSION_MAX_AGE;
   res.setHeader('Set-Cookie', [clearState, setSession]);
   res.redirect(302, appOrigin + '/?auth_ok=1');
-  
+
 };
  
 
