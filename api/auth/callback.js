@@ -141,4 +141,7 @@ module.exports = async function handler(req, res) {
   const setSession = SESSION_COOKIE + '=' + encodeURIComponent(sessionValue) + '; Path=/; HttpOnly; SameSite=Lax; Max-Age=' + SESSION_MAX_AGE;
   res.setHeader('Set-Cookie', [clearState, setSession]);
   res.redirect(302, appOrigin + '/?auth_ok=1');
+  
 };
+ 
+
